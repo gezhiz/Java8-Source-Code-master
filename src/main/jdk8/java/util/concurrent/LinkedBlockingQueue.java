@@ -136,7 +136,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
     /** The capacity bound, or Integer.MAX_VALUE if none */
     private final int capacity;
 
-    /** Current number of elements */
+    /** Current number of elements 当前元素数量 */
     private final AtomicInteger count = new AtomicInteger();
 
     /**
@@ -210,11 +210,11 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         // assert takeLock.isHeldByCurrentThread();
         // assert head.item == null;
         Node<E> h = head;
-        Node<E> first = h.next;
-        h.next = h; // help GC
-        head = first;
-        E x = first.item;
-        first.item = null;
+        Node<E> first = h.next;//需要出队列的结点first
+        h.next = h; //形成环形引用 help GC
+        head = first;//把first变成头结点
+        E x = first.item;//缓存结点值
+        first.item = null;//清空结点值
         return x;
     }
 
@@ -346,13 +346,13 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
              * signalled if it ever changes from capacity. Similarly
              * for all other uses of count in other wait guards.
              */
-            while (count.get() == capacity) {
+            while (count.get() == capacity) {//while循环防止"伪唤醒"，被唤醒之后再次检查队列是否满，队列满则继续等待
                 notFull.await();
             }
             enqueue(node);
             c = count.getAndIncrement();
             if (c + 1 < capacity)
-                notFull.signal();
+                notFull.signal();//唤醒notFull下的入队线程，防止这类线程等待过长的时间
         } finally {
             putLock.unlock();
         }
@@ -442,14 +442,14 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
                 notEmpty.await();
             }
             x = dequeue();
-            c = count.getAndDecrement();
+            c = count.getAndDecrement();//元素数量减一
             if (c > 1)
                 notEmpty.signal();
         } finally {
             takeLock.unlock();
         }
-        if (c == capacity)
-            signalNotFull();
+        if (c == capacity)//元素数量与容量相等
+            signalNotFull();//通知队列未满，唤醒一个等待队列未满的线程
         return x;
     }
 

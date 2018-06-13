@@ -162,7 +162,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         if (++putIndex == items.length)
             putIndex = 0;
         count++;
-        notEmpty.signal();
+        notEmpty.signal();//不为空的信号
     }
 
     /**
@@ -313,6 +313,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 添加元素，不会发生阻塞
      * Inserts the specified element at the tail of this queue if it is
      * possible to do so immediately without exceeding the queue's capacity,
      * returning {@code true} upon success and {@code false} if this queue
@@ -338,6 +339,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 添加元素（可阻塞），队列慢，则一直阻塞，直到被读线程唤醒
      * Inserts the specified element at the tail of this queue, waiting
      * for space to become available if the queue is full.
      *
@@ -358,6 +360,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     }
 
     /**
+     * 添加元素，如果队列慢，则根据给定的计时器阻塞相应的时间
      * Inserts the specified element at the tail of this queue, waiting
      * up to the specified wait time for space to become available if
      * the queue is full.
@@ -384,7 +387,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
             lock.unlock();
         }
     }
-
+    //出队列，不会发生阻塞
     public E poll() {
         final ReentrantLock lock = this.lock;
         lock.lock();
@@ -394,7 +397,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
             lock.unlock();
         }
     }
-
+    //出队列（阻塞获取），如果队列为空，则等待入队线程唤醒
     public E take() throws InterruptedException {
         final ReentrantLock lock = this.lock;
         lock.lockInterruptibly();
@@ -406,7 +409,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
             lock.unlock();
         }
     }
-
+    //出队列，如果队列为空，阻塞，并周期性的唤醒
     public E poll(long timeout, TimeUnit unit) throws InterruptedException {
         long nanos = unit.toNanos(timeout);
         final ReentrantLock lock = this.lock;
@@ -1057,11 +1060,11 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
 
         Itr() {
             // assert lock.getHoldCount() == 0;
-            lastRet = NONE;
+            lastRet = NONE;//上一个元素的索引
             final ReentrantLock lock = ArrayBlockingQueue.this.lock;
-            lock.lock();
+            lock.lock();//使用队列的锁
             try {
-                if (count == 0) {
+                if (count == 0) {//队列没有元素
                     // assert itrs == null;
                     cursor = NONE;
                     nextIndex = NONE;
@@ -1070,8 +1073,8 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
                     final int takeIndex = ArrayBlockingQueue.this.takeIndex;
                     prevTakeIndex = takeIndex;
                     nextItem = itemAt(nextIndex = takeIndex);
-                    cursor = incCursor(takeIndex);
-                    if (itrs == null) {
+                    cursor = incCursor(takeIndex);//计算游标
+                    if (itrs == null) {//itrs用来保证迭代器和队列的数据同步
                         itrs = new Itrs(this);
                     } else {
                         itrs.register(this); // in this order
@@ -1087,18 +1090,18 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
                 lock.unlock();
             }
         }
-
+        //是否处于分离模式
         boolean isDetached() {
             // assert lock.getHoldCount() == 1;
             return prevTakeIndex < 0;
         }
-
+        //计算游标
         private int incCursor(int index) {
             // assert lock.getHoldCount() == 1;
             if (++index == items.length)
-                index = 0;
+                index = 0;//游标与数组长度相等，重置为0
             if (index == putIndex)
-                index = NONE;
+                index = NONE;//游标值与入队索引值相等，则游标置空
             return index;
         }
 
@@ -1228,9 +1231,9 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
                 lastRet = nextIndex;
                 final int cursor = this.cursor;
                 if (cursor >= 0) {
-                    nextItem = itemAt(nextIndex = cursor);
+                    nextItem = itemAt(nextIndex = cursor);//获取下一个元素
                     // assert nextItem != null;
-                    this.cursor = incCursor(cursor);
+                    this.cursor = incCursor(cursor);//获取下一个游标
                 } else {
                     nextIndex = NONE;
                     nextItem = null;

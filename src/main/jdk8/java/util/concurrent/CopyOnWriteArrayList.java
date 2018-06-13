@@ -542,14 +542,14 @@ public class CopyOnWriteArrayList<E>
                 for (int i = 0; i < prefix; i++) {
                     if (current[i] != snapshot[i] && eq(o, current[i])) {
                         index = i;
-                        break findIndex;
+                        break findIndex;//如果0~prefix之间已经找到了o
                     }
                 }
                 if (index >= len)
                     return false;
                 if (current[index] == o)
                     break findIndex;
-                index = indexOf(o, current, index, len);
+                index = indexOf(o, current, index, len);//在index和len之间找o
                 if (index < 0)
                     return false;
             }
