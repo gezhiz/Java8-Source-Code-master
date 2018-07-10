@@ -218,6 +218,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
     protected void done() { }
 
     /**
+     * 设置任务执行结果
      * Sets the result of this future to the given value unless
      * this future has already been set or has been cancelled.
      *

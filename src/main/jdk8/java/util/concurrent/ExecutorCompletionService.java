@@ -117,7 +117,7 @@ public class ExecutorCompletionService<V> implements CompletionService<V> {
             super(task, null);
             this.task = task;
         }
-        protected void done() { completionQueue.add(task); }
+        protected void done() { completionQueue.add(task); }//重写了done方法，完成后把任务放入完成队列
         private final Future<V> task;
     }
 
@@ -174,21 +174,21 @@ public class ExecutorCompletionService<V> implements CompletionService<V> {
             (AbstractExecutorService) executor : null;
         this.completionQueue = completionQueue;
     }
-
+    //可以使用这个服务向executor提交任务
     public Future<V> submit(Callable<V> task) {
         if (task == null) throw new NullPointerException();
         RunnableFuture<V> f = newTaskFor(task);
         executor.execute(new QueueingFuture(f));
         return f;
     }
-
+    //可以使用这个服务向executor提交任务
     public Future<V> submit(Runnable task, V result) {
         if (task == null) throw new NullPointerException();
         RunnableFuture<V> f = newTaskFor(task, result);
         executor.execute(new QueueingFuture(f));
         return f;
     }
-
+    //从完成队列里获取已完成的任务
     public Future<V> take() throws InterruptedException {
         return completionQueue.take();
     }

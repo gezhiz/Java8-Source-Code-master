@@ -293,7 +293,7 @@ public class ScheduledThreadPoolExecutor
                 ScheduledFutureTask.super.run();
             else if (ScheduledFutureTask.super.runAndReset()) {
                 setNextRunTime();
-                reExecutePeriodic(outerTask);
+                reExecutePeriodic(outerTask);//已经执行过一次任务了，再次提交
             }
         }
     }
@@ -338,7 +338,8 @@ public class ScheduledThreadPoolExecutor
     /**
      * Requeues a periodic task unless current run state precludes it.
      * Same idea as delayedExecute except drops task rather than rejecting.
-     *
+     * 1、由于已经执行过一次任务，所以不会拒绝该任务
+     * 2、传入的任务一定是周期性任务
      * @param task the task
      */
     void reExecutePeriodic(RunnableScheduledFuture<?> task) {
@@ -802,6 +803,7 @@ public class ScheduledThreadPoolExecutor
     }
 
     /**
+     * 这个队列的出队方法，﻿只能返回已经到了执行时间点的任务
      * Specialized delay queue. To mesh with TPE declarations, this
      * class must be declared as a BlockingQueue<Runnable> even though
      * it can only hold RunnableScheduledFutures.
@@ -834,7 +836,7 @@ public class ScheduledThreadPoolExecutor
 
         private static final int INITIAL_CAPACITY = 16;
         private RunnableScheduledFuture<?>[] queue =
-            new RunnableScheduledFuture<?>[INITIAL_CAPACITY];
+            new RunnableScheduledFuture<?>[INITIAL_CAPACITY];//堆排序算法
         private final ReentrantLock lock = new ReentrantLock();
         private int size = 0;
 
@@ -871,6 +873,7 @@ public class ScheduledThreadPoolExecutor
         }
 
         /**
+         * 入堆，根据时间长短排序
          * Sifts element added at bottom up to its heap-ordered spot.
          * Call only when holding lock.
          */
@@ -889,6 +892,7 @@ public class ScheduledThreadPoolExecutor
         }
 
         /**
+         * 出堆
          * Sifts element added at top down to its heap-ordered spot.
          * Call only when holding lock.
          */
@@ -1011,15 +1015,15 @@ public class ScheduledThreadPoolExecutor
             try {
                 int i = size;
                 if (i >= queue.length)
-                    grow();
-                size = i + 1;
-                if (i == 0) {
+                    grow();//扩容操作
+                size = i + 1;// 这个i就是RunnableScheduledFuture用到的heapIndex
+                if (i == 0) {//如果堆中无元素，则直接放入堆中
                     queue[0] = e;
-                    setIndex(e, 0);
+                    setIndex(e, 0);//
                 } else {
-                    siftUp(i, e);
+                    siftUp(i, e);//添加元素到堆中
                 }
-                if (queue[0] == e) {
+                if (queue[0] == e) {//如果入队之前无元素，入队前有可能有线程在等待队列不为空的条件
                     leader = null;
                     available.signal();
                 }
@@ -1056,7 +1060,7 @@ public class ScheduledThreadPoolExecutor
             setIndex(f, -1);
             return f;
         }
-
+        //从队列中获取已到执行时间的任务（queue是已经排好序的堆，只需要判定第一个是否到期就行）
         public RunnableScheduledFuture<?> poll() {
             final ReentrantLock lock = this.lock;
             lock.lock();
@@ -1077,7 +1081,7 @@ public class ScheduledThreadPoolExecutor
             try {
                 for (;;) {
                     RunnableScheduledFuture<?> first = queue[0];
-                    if (first == null)
+                    if (first == null)//堆中没有任务，等待
                         available.await();
                     else {
                         long delay = first.getDelay(NANOSECONDS);
@@ -1085,7 +1089,7 @@ public class ScheduledThreadPoolExecutor
                             return finishPoll(first);
                         first = null; // don't retain ref while waiting
                         if (leader != null)
-                            available.await();
+                            available.await();//在leader线程执行完成后，会调用available.singal()唤醒
                         else {
                             Thread thisThread = Thread.currentThread();
                             leader = thisThread;
@@ -1100,7 +1104,7 @@ public class ScheduledThreadPoolExecutor
                 }
             } finally {
                 if (leader == null && queue[0] != null)
-                    available.signal();
+                    available.signal();//leader线程执行完成之后，让available唤醒，其他线程的出入队线程继续执行
                 lock.unlock();
             }
         }
@@ -1142,7 +1146,7 @@ public class ScheduledThreadPoolExecutor
                 }
             } finally {
                 if (leader == null && queue[0] != null)
-                    available.signal();
+                    available.signal();//当前线程的poll方法执行完成后唤醒其他的出入队线程
                 lock.unlock();
             }
         }
